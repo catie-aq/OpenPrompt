@@ -13,7 +13,9 @@ from transformers import BertConfig, BertTokenizer, BertModel, BertForMaskedLM, 
                          OpenAIGPTTokenizer, OpenAIGPTLMHeadModel, OpenAIGPTConfig, \
                          GPT2Config, GPT2Tokenizer, GPT2LMHeadModel, \
                          OPTConfig, OPTForCausalLM, \
-                         ElectraConfig, ElectraForMaskedLM, ElectraTokenizer
+                         ElectraConfig, ElectraForMaskedLM, ElectraTokenizer, \
+                         AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+
 from collections import namedtuple
 from yacs.config import CfgNode
 
@@ -33,6 +35,12 @@ _MODEL_CLASSES = {
         'config': RobertaConfig,
         'tokenizer': RobertaTokenizer,
         'model':RobertaForMaskedLM,
+        'wrapper': MLMTokenizerWrapper
+    }),
+    'automlm': ModelClass(**{
+        'config': AutoConfig,
+        'tokenizer': AutoTokenizer,
+        'model':AutoModelForMaskedLM,
         'wrapper': MLMTokenizerWrapper
     }),
     'albert': ModelClass(**{
@@ -108,7 +116,10 @@ def load_plm(model_name, model_path, specials_to_add = None):
         # model_config.resid_pdrop = 0.0
         # model_config.embd_pdrop = 0.0
     model = model_class.model.from_pretrained(model_path, config=model_config)
-    tokenizer = model_class.tokenizer.from_pretrained(model_path)
+    if isinstance(model_class.tokenizer, AutoTokenizer):
+        tokenizer = model_class.tokenizer.from_pretrained(model_path, use_fast=False)
+    else:
+        tokenizer = model_class.tokenizer.from_pretrained(model_path)
     wrapper = model_class.wrapper
 
 
@@ -174,6 +185,3 @@ def add_special_tokens(model: PreTrainedModel,
                 model.resize_token_embeddings(len(tokenizer))
                 logger.info("pad token is None, set to id {}".format(tokenizer.pad_token_id))
     return model, tokenizer
-
-
-
